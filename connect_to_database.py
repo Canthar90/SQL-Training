@@ -3,6 +3,166 @@ from mysql.connector import connect, Error
 import json
 import logging
 
+def delete_record():
+    """Sample code for deleting record"""
+    select_movie_query = """
+    SELECT reviewer_id, movie_id FROM ratings
+    WHERE reviewer_id = 2
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(select_movie_query)
+        for movie in cursor.fetchall():
+            print(movie)
+        print('\n')
+
+    delete_query = """
+    DELETE FROM ratings
+    WHERE reviewer_id = 2
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(delete_query)
+        connection.commit()
+
+
+def update_multiple_elements():
+    """Sample code updating multiple records in table"""
+    movie_id = input("Enter movie id: ")
+    reviewer_id = input("Enter reviewer id: ")
+    new_rating = input("Enter new rating: ")
+    update_query = """
+    UPDATE
+        ratings
+    SET
+        rating = %s
+    WHERE
+        movie_id = %s AND reviewer_id = %s;
+    
+    SELECT *
+    FROM ratings
+    WHERE 
+        movie_id =%s AND reviewer_id = %s
+    """
+    val_tuple = (
+        new_rating,
+        movie_id,
+        reviewer_id,
+        movie_id,
+        reviewer_id
+    )
+    with connection.cursor() as cursor:
+        for result in cursor.execute(update_query, val_tuple, multi=True):
+            if result.with_rows:
+                print(result.fetchall())
+        connection.commit()
+
+
+def update_one_element():
+    """Sample code that updates one element in one record of one table"""
+    update_movie_query = """
+    UPDATE
+        reviewers
+    SET
+        last_name = "Cooper"
+    Where
+        first_name = "Amy"
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(update_movie_query)
+        connection.commit()
+    logging.info("Succesfully updatet one element")
+
+
+def find_reviewer():
+    """Sample code that winds in ouer database the reviewer who made the most reviews"""
+    select_movie_query = """
+    SELECT CONCAT(first_name, " ", last_name), COUNT(*) as num 
+    FROM reviewers
+    INNER JOIN ratings
+        ON reviewers.id =  ratings.reviewer_id
+    GROUP BY reviewer_id
+    ORDER BY num DESC
+    LIMIT 2   
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(select_movie_query)
+        for reviewer in cursor.fetchall():
+            print(reviewer)
+        print('\n')
+
+
+def joining_usage():
+    """Sample code for using Join to search 5 best rated movies"""
+    select_movie_query = """
+    SELECT title, AVG(rating) as average_rating
+    FROM ratings
+    INNER JOIN movies
+        ON movies.id = ratings.movie_id
+    GROUP BY movie_id
+    ORDER BY average_rating DESC
+    LIMIT 5
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(select_movie_query)
+        for movies in cursor.fetchall():
+            print(movies)
+        print("\n")
+
+
+def fetchmany_usage():
+    """Sample code for using fetchmany """
+    select_movies_query = """
+    SELECT CONCAT(title, " (", release_year, ")"),
+          collection_in_mil
+    FROM movies
+    ORDER BY collection_in_mil DESC
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(select_movies_query)
+        for movie in cursor.fetchmany(size=5):
+            print(movie)
+        cursor.fetchall()
+        print("\n")
+
+
+def filtering_records_with_formating():
+    """Sample code for filtering record with string formating """
+    select_movies_query = """
+    SELECT CONCAT(title, "(", release_year, ")"), collection_in_mil    
+    FROM movies
+    ORDER BY collection_in_mil DESC
+    LIMIT 5
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(select_movies_query)
+        for movie in cursor.fetchall():
+            print(movie)
+        print("\n")
+
+
+def filtering_records():
+    """Sample code for filtering records in MySQL using WHERE"""
+    select_movies_query = """
+    SELECT title, collection_in_mil
+    FROM movies
+    WHERE collection_in_mil > 300
+    ORDER BY collection_in_mil DESC
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(select_movies_query)
+        for movie in cursor.fetchall():
+            print(movie)
+        print("\n")
+
+
+def reading_records_by_columns():
+    """Sample code for displaying exact columns from database table"""
+    select_table_query = """SELECT title, release_year FROM movies LIMIT 5"""
+    with connection.cursor() as cursor:
+        cursor.execute(select_table_query)
+        for row in cursor.fetchall():
+            print(row)
+        print("\n")
+
 
 def reading_records(table_name, amount):
     """Reads the chosen table with chosen amount of records
@@ -12,6 +172,7 @@ def reading_records(table_name, amount):
         cursor.execute(select_table_query)
         for row in cursor.fetchall():
             print(row)
+        print("\n")
 
 
 def insert_single_execute():
@@ -139,6 +300,7 @@ def modify_table():
 
         for row in result:
             print(row)
+        print("\n")
 
 
 def describe_tables():
@@ -268,9 +430,32 @@ try:
             ammount = input("what amount of records you want to see: ").lower()
             try:
                 reading_records(table_name=tablename, amount=ammount)
+                reading_records_by_columns()
             except Error as e:
                 logging.error(e)
-
+        filtering_selection = input("If you want to filter data from datase type 'y': ")
+        if filtering_selection.lower() == 'y':
+            try:
+                filtering_records()
+                filtering_records_with_formating()
+                fetchmany_usage()
+                joining_usage()
+                find_reviewer()
+            except Error as e:
+                logging.error(e)
+        updating_selection = input("If you want to update data from database type 'y': ")
+        if updating_selection.lower() == 'y':
+            try:
+                update_one_element()
+                update_multiple_elements()
+            except Error as e:
+                print(e)
+        deleting_selection = input("If you want to delete data from database type 'y': ")
+        if deleting_selection.lower() == 'y':
+            try:
+                delete_record()
+            except Error as e:
+                logging.error(e)
 except Error as e:
     logging.error(f"error during connecting to database occured \n {e}")
 
